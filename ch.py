@@ -203,7 +203,7 @@ def check_card_stripe(cc_line):
                 error_msg = f"Status: {confirm.status_code}"
                 
             return f"""
-❌ CONFIRMATION FAILED ❌
+❌ DECLINED CC 
 
 💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
 🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ {error_msg}
@@ -266,3 +266,4 @@ if __name__ == "__main__":
     test_card = "4556737586899855|12|2026|123"
     result = check_card_stripe(test_card)
     print(result)
+
