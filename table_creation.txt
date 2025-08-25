@@ -1,0 +1,24 @@
+CREATE TABLE IF NOT EXISTS admins (
+    user_id BIGINT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS free_users (
+    user_id BIGINT PRIMARY KEY,
+    first_name TEXT,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS premium_keys (
+    `key` VARCHAR(255) PRIMARY KEY,
+    validity_days INT NOT NULL,
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    used_by BIGINT DEFAULT NULL,
+    used_at TIMESTAMP NULL
+);
+
+CREATE TABLE IF NOT EXISTS premium_users (
+    user_id BIGINT PRIMARY KEY,
+    first_name TEXT,
+    subscription_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    subscription_expiry TIMESTAMP
+);

@@ -1,0 +1,7 @@
+cookies = {
+    'twk_idm_key': 'ZKBvE0zulxbNZxUpt-iM8',
+    'wordpress_sec_e31b2360f8870d8dfd3f356291d53a98': 'hgo80894%40jioso.com%7C1757212875%7CRQYHlXT85bggdbfp8w7j0d4cyifIAkiXWlWccVUvL85%7C58ca60b5194c949a3d1ba561e1c339cde0415a7b1486f1a826bb2b6309b8fd39',
+    'wordpress_logged_in_e31b2360f8870d8dfd3f356291d53a98': 'hgo80894%40jioso.com%7C1757212875%7CRQYHlXT85bggdbfp8w7j0d4cyifIAkiXWlWccVUvL85%7C5a0ea8d6ae1023ef985001070733946262e5646d0743cb62df0d08fcb1d126eb',
+    'TawkConnectionTime': '0',
+    'twk_uuid_5d89ed5a6c1dde20ed032085': '%7B%22uuid%22%3A%221.bK0iZQ4uq78MPe42j9HL1pdVeGfIY7ObcClBuCFiGeUUyHLpL9t4oYqvpfv7bTQJEkXGFBHDrDuBSfSCX9NjYPz6PUdUIPD0mjaSm84TPLLEctAxTV0Q0Wyfw8I9C%22%2C%22version%22%3A3%2C%22domain%22%3A%22smitsphilately.com%22%2C%22ts%22%3A1756003292487%7D',
+}
