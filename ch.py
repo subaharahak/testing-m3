@@ -139,7 +139,7 @@ def check_card_stripe(cc_line):
         if setup.status_code != 200:
             elapsed_time = time.time() - start_time
             return f"""
-❌ SETUP FAILED ❌
+❌ GATE ERROR
 
 💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
 🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ Setup failed with status {setup.status_code}
@@ -155,7 +155,7 @@ def check_card_stripe(cc_line):
         if '{"client_secret":"' not in setup_text:
             elapsed_time = time.time() - start_time
             return f"""
-❌ SETUP FAILED ❌
+❌ GATE ERROR
 
 💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
 🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ Client secret not found in response
@@ -266,4 +266,5 @@ if __name__ == "__main__":
     test_card = "4556737586899855|12|2026|123"
     result = check_card_stripe(test_card)
     print(result)
+
 
